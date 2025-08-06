@@ -10,11 +10,10 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { authAPI } from '../services/api';
-import { User } from '../types';
+import { LoginCredentials } from '../types';
 
 interface LoginProps {
-  onLogin: (user: User) => void;
+  onLogin: (credentials: LoginCredentials) => Promise<void>;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -31,14 +30,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       setError('');
       
       try {
-        const response = await authAPI.login(values);
-        
-        // Store token and user data
-        localStorage.setItem('token', response.jwt);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        // Call parent callback
-        onLogin(response.user);
+        await onLogin(values);
       } catch (err: any) {
         console.error('Login error:', err);
         setError(

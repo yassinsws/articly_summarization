@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Container,
   Typography,
@@ -6,15 +6,15 @@ import {
   AppBar,
   Toolbar,
   Button,
-  Alert,
-  CircularProgress,
   Paper,
   Chip,
 } from '@mui/material';
 import { Logout, Refresh } from '@mui/icons-material';
-import { Task, User } from '../types';
-import { tasksAPI, authAPI } from '../services/api';
+import { User } from '../types';
+import { useTasks } from '../hooks/useTasks';
 import TaskCard from './TaskCard';
+import LoadingSpinner from './common/LoadingSpinner';
+import ErrorAlert from './common/ErrorAlert';
 
 interface DashboardProps {
   user: User;
@@ -22,53 +22,17 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-
-  const loadTasks = async () => {
-    setLoading(true);
-    setError('');
-          try {
-        const response = await tasksAPI.getUserTasks();
-        console.log('📊 Dashboard received tasks:', response);
-        console.log('📊 Tasks array:', response.data);
-        console.log('📊 Number of tasks:', response.data?.length);
-        setTasks(response.data);
-    } catch (err: any) {
-      console.error('Error loading tasks:', err);
-      setError('Failed to load tasks. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const handleLogout = () => {
-    authAPI.logout();
-    onLogout();
-  };
-
-  const handleTaskUpdate = (updatedTask: Task) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === updatedTask.id ? updatedTask : task
-      )
-    );
-  };
-
-  const getTaskStats = () => {
-    const approved = tasks.filter(task => task?.approved === true).length;
-    const disapproved = tasks.filter(task => task?.approved === false).length;
-    const pending = tasks.filter(task => task?.approved === undefined || task?.approved === null).length;
-    
-    return { approved, disapproved, pending, total: tasks.length };
-  };
-
-  const stats = getTaskStats();
+  const {
+    filteredTasks,
+    loading,
+    error,
+    statusFilter,
+    stats,
+    loadTasks,
+    updateTask,
+    setStatusFilter,
+    clearError,
+  } = useTasks();
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -89,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
           <Button
             color="inherit"
             startIcon={<Logout />}
-            onClick={handleLogout}
+            onClick={onLogout}
           >
             Logout
           </Button>
@@ -100,28 +64,58 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
         {/* Statistics */}
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
-            Task Overview
+            Task Overview - Click to filter
           </Typography>
           <Box display="flex" gap={2} flexWrap="wrap">
-            <Chip label={`Total: ${stats.total}`} variant="outlined" />
-            <Chip label={`Approved: ${stats.approved}`} color="success" />
-            <Chip label={`Disapproved: ${stats.disapproved}`} color="error" />
-            <Chip label={`Pending: ${stats.pending}`} color="default" />
+            <Chip 
+              label={`Total: ${stats.total}`} 
+              variant={statusFilter === 'all' ? 'filled' : 'outlined'}
+              color={statusFilter === 'all' ? 'primary' : 'default'}
+              onClick={() => setStatusFilter('all')}
+              clickable
+            />
+            <Chip 
+              label={`Approved: ${stats.approved}`} 
+              variant={statusFilter === 'approved' ? 'filled' : 'outlined'}
+              color="success"
+              onClick={() => setStatusFilter('approved')}
+              clickable
+            />
+            <Chip 
+              label={`Disapproved: ${stats.disapproved}`} 
+              variant={statusFilter === 'disapproved' ? 'filled' : 'outlined'}
+              color="error"
+              onClick={() => setStatusFilter('disapproved')}
+              clickable
+            />
+            <Chip 
+              label={`Pending: ${stats.pending}`} 
+              variant={statusFilter === 'pending' ? 'filled' : 'outlined'}
+              color="default"
+              onClick={() => setStatusFilter('pending')}
+              clickable
+            />
           </Box>
+          {statusFilter !== 'all' && (
+            <Box mt={2}>
+              <Typography variant="body2" color="text.secondary">
+                Showing {statusFilter} tasks ({filteredTasks.length} of {stats.total})
+              </Typography>
+            </Box>
+          )}
         </Paper>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <ErrorAlert 
+            message={error}
+            onRetry={loadTasks}
+            onDismiss={clearError}
+          />
         )}
 
         {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-            <CircularProgress />
-            <Typography sx={{ ml: 2 }}>Loading tasks...</Typography>
-          </Box>
-        ) : tasks.length === 0 ? (
+          <LoadingSpinner message="Loading tasks..." />
+        ) : stats.total === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
             <Typography variant="h6" color="text.secondary">
               No tasks found
@@ -130,16 +124,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
               You haven't created any tasks yet.
             </Typography>
           </Paper>
+        ) : filteredTasks.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary">
+              No {statusFilter} tasks found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Try selecting a different filter or create new tasks.
+            </Typography>
+          </Paper>
         ) : (
           <Box>
             <Typography variant="h5" gutterBottom>
-              Your Tasks ({tasks.length})
+              {statusFilter === 'all' ? 'Your Tasks' : `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Tasks`} ({filteredTasks.length})
             </Typography>
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <TaskCard
-                key={task.id}
+                key={task.documentId || task.id}
                 task={task}
-                onTaskUpdate={handleTaskUpdate}
+                onTaskUpdate={updateTask}
               />
             ))}
           </Box>

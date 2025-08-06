@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -6,16 +6,19 @@ import {
   Box,
   Button,
   TextField,
-  Chip,
-  Alert,
   CircularProgress,
 } from '@mui/material';
 import {
   ThumbUp,
   ThumbDown,
+  Edit,
+  Save,
+  Cancel,
 } from '@mui/icons-material';
 import { Task } from '../types';
 import { tasksAPI } from '../services/api';
+import StatusChip from './common/StatusChip';
+import ErrorAlert from './common/ErrorAlert';
 
 interface TaskCardProps {
   task: Task;
@@ -26,54 +29,68 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editedSummary, setEditedSummary] = useState(task?.summary || '');
+  React.useEffect(() => {
+    setEditedSummary(task?.summary || '');
+  }, [task?.summary]);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
 
-  if (!task) return null;
+  const clearError = useCallback(() => setError(''), []);
 
-  const handleApprove = async () => {
+  const handleApprove = useCallback(async () => {
     setLoading(true);
-    setError(''); // Clear any previous errors
+    setError('');
     try {
-      console.log(' TaskCard: Approving task', task.id);
       const updatedTask = await tasksAPI.approveTask(task);
-      console.log('TaskCard: Received updated task', updatedTask);
       onTaskUpdate(updatedTask);
     } catch (err: any) {
-      console.error('TaskCard: Error approving task', err);
-      setError('Failed to approve task');
+      console.error('Error approving task:', err);
+      setError('Failed to approve task. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [task, onTaskUpdate]);
 
-  const handleDisapprove = async () => {
+  const handleDisapprove = useCallback(async () => {
     setLoading(true);
-    setError(''); // Clear any previous errors
+    setError('');
     try {
-      console.log(' TaskCard: Disapproving task', task.id);
       const updatedTask = await tasksAPI.disapproveTask(task);
-      console.log('TaskCard: Received updated task', updatedTask);
       onTaskUpdate(updatedTask);
     } catch (err: any) {
-      console.error('TaskCard: Error disapproving task', err);
-      setError('Failed to disapprove task');
+      console.error('Error disapproving task:', err);
+      setError('Failed to disapprove task. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [task, onTaskUpdate]);
 
-  const handleSaveSummary = async () => {
+  const handleSaveSummary = useCallback(async () => {
+    if (editedSummary.trim() === '') {
+      setError('Summary cannot be empty');
+      return;
+    }
+
     setLoading(true);
+    setError('');
     try {
-      const updatedTask = await tasksAPI.updateSummary(task.id, editedSummary);
+      const updatedTask = await tasksAPI.updateSummary(task, editedSummary.trim());
       onTaskUpdate(updatedTask);
       setIsEditingSummary(false);
-    } catch (err) {
-      setError('Failed to update summary');
+    } catch (err: any) {
+      console.error('Error updating summary:', err);
+      setError('Failed to update summary. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [task, editedSummary, onTaskUpdate]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditedSummary(task?.summary || '');
+    setIsEditingSummary(false);
+    setError('');
+  }, [task?.summary]);
+
+  if (!task) return null;
 
   // Access fields directly from task since API structure is flat
   const approved = task?.approved;
@@ -82,15 +99,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
   const createdAt = task?.createdAt || '';
 
   return (
-    <Card sx={{ mb: 2 }}>
+    <Card sx={{ mb: 2, '&:hover': { boxShadow: 2 } }}>
       <CardContent>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <ErrorAlert 
+            message={error}
+            onDismiss={clearError}
+          />
+        )}
 
         <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
           <Typography variant="h6">Task #{task.id}</Typography>
-          {approved === true && <Chip label="Approved" color="success" />}
-          {approved === false && <Chip label="Disapproved" color="error" />}
-          {approved !== true && approved !== false && <Chip label="Pending" />}
+          <StatusChip approved={approved} />
         </Box>
 
         <Box mb={2}>
@@ -106,10 +126,22 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
                 disabled={loading}
               />
               <Box mt={1} display="flex" gap={1}>
-                <Button size="small" variant="contained" onClick={handleSaveSummary} disabled={loading}>
+                <Button 
+                  size="small" 
+                  variant="contained" 
+                  startIcon={loading ? <CircularProgress size={16} /> : <Save />}
+                  onClick={handleSaveSummary} 
+                  disabled={loading || editedSummary.trim() === ''}
+                >
                   Save
                 </Button>
-                <Button size="small" variant="outlined" onClick={() => setIsEditingSummary(false)} disabled={loading}>
+                <Button 
+                  size="small" 
+                  variant="outlined" 
+                  startIcon={<Cancel />}
+                  onClick={handleCancelEdit} 
+                  disabled={loading}
+                >
                   Cancel
                 </Button>
               </Box>
@@ -119,7 +151,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
               <Typography variant="body2" sx={{ flexGrow: 1 }}>
                 {summary || 'No summary available'}
               </Typography>
-              <Button size="small" onClick={() => setIsEditingSummary(true)}>
+              <Button 
+                size="small" 
+                startIcon={<Edit />}
+                onClick={() => setIsEditingSummary(true)}
+              >
                 Edit
               </Button>
             </Box>
@@ -131,26 +167,37 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
           <Typography variant="body2">{longText}</Typography>
         </Box>
 
-        <Box display="flex" gap={1} justifyContent="flex-end">
+        <Box display="flex" gap={1} justifyContent="flex-end" alignItems="center">
+          <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            Status:
+          </Typography>
           <Button
-            variant="contained"
+            variant={approved === true ? "contained" : "outlined"}
             color="success"
             startIcon={loading ? <CircularProgress size={16} /> : <ThumbUp />}
             onClick={handleApprove}
-            disabled={loading || approved === true}
+            disabled={loading}
             size="small"
+            sx={{ 
+              opacity: approved === false ? 0.7 : 1,
+              fontWeight: approved === true ? 'bold' : 'normal'
+            }}
           >
-            Approve
+            {approved === true ? "Approved ✓" : "Approve"}
           </Button>
           <Button
-            variant="contained"
+            variant={approved === false ? "contained" : "outlined"}
             color="error"
             startIcon={loading ? <CircularProgress size={16} /> : <ThumbDown />}
             onClick={handleDisapprove}
-            disabled={loading || approved === false}
+            disabled={loading}
             size="small"
+            sx={{ 
+              opacity: approved === true ? 0.7 : 1,
+              fontWeight: approved === false ? 'bold' : 'normal'
+            }}
           >
-            Disapprove
+            {approved === false ? "Disapproved ✗" : "Disapprove"}
           </Button>
         </Box>
 

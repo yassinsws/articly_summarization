@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { AuthResponse, LoginCredentials, TasksResponse, Task } from '../types';
+import { config } from '../config/env';
 
-const API_URL = 'http://localhost:1337';
+const API_URL = config.API_URL;
 
 // Create axios instance with default config
 const api = axios.create({
@@ -12,31 +13,41 @@ const api = axios.create({
 });
 
 // Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (requestConfig) => {
+    const token = localStorage.getItem(config.settings.TOKEN_KEY);
+    if (token) {
+      requestConfig.headers.Authorization = `Bearer ${token}`;
+    }
+    return requestConfig;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Add response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle common errors
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem(config.settings.TOKEN_KEY);
+      localStorage.removeItem(config.settings.USER_KEY);
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth API
 export const authAPI = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    console.log('🔐 Login Request Started:', {
-      url: `${API_URL}/api/auth/local`,
-      credentials: {
-        ...credentials,
-      }
-    });
+    console.log('Login request started');
 
     try {
-      console.log('📡 Sending request to Strapi...', {
-        method: 'POST',
-        url: '/api/auth/local',
-        headers: api.defaults.headers,
-        data: credentials
-      });
+      console.log('Sending authentication request to Strapi');
       
       // Make sure credentials are sent in the correct format
       const requestData = {
@@ -44,43 +55,13 @@ export const authAPI = {
         password: credentials.password
       };
       
-      const response = await api.post('/api/auth/local', requestData);
+      const response = await api.post(config.endpoints.AUTH, requestData);
       
-      console.log('✅ Login Success:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        user: {
-          ...response.data.user,
-          // Only log essential user info
-          email: response.data.user?.email,
-          username: response.data.user?.username,
-          id: response.data.user?.id
-        },
-        jwt: response.data.jwt ? `${response.data.jwt.substring(0, 10)}...[REDACTED]` : null
-      });
+      console.log('Login successful');
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ Login Error:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        error: error.response?.data?.error,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data, // Log the actual data sent
-          headers: {
-            ...error.config?.headers,
-            Authorization: error.config?.headers?.Authorization ? '[REDACTED]' : undefined
-          }
-        }
-      });
-      
-      // Log the full error object in case we need more details
-      console.error('Full error object:', error);
+      console.error('Login failed:', error.response?.status, error.response?.statusText);
       
       // Re-throw the error to be handled by the caller
       throw error;
@@ -88,100 +69,96 @@ export const authAPI = {
   },
   
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+          localStorage.removeItem(config.settings.TOKEN_KEY);
+      localStorage.removeItem(config.settings.USER_KEY);
   },
   
   getCurrentUser: () => {
-    const userData = localStorage.getItem('user');
+          const userData = localStorage.getItem(config.settings.USER_KEY);
     return userData ? JSON.parse(userData) : null;
   },
   
   isAuthenticated: (): boolean => {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem(config.settings.TOKEN_KEY);
   },
 };
 
 // Tasks API
 export const tasksAPI = {
   getUserTasks: async (): Promise<TasksResponse> => {
-    console.log('📋 Fetching user tasks...');
+    console.log('Fetching user tasks');
     
     try {
       // Fetch both published and draft tasks using the status parameter
-      const response = await api.get('/api/tasks?populate=*&status=draft,published');
+      const response = await api.get(`${config.endpoints.TASKS}?populate=*&status=draft,published`);
       
-      console.log('✅ Tasks fetched successfully:', {
-        status: response.status,
-        tasksCount: response.data?.data?.length || 0,
-        publicationState: 'both draft and published'
-      });
+      console.log('Tasks fetched successfully. Count:', response.data?.data?.length || 0);
       
       return response.data;
     } catch (error: any) {
-      console.error('❌ Error fetching tasks:', {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        error: error.response?.data?.error
-      });
+      console.error('Error fetching tasks:', error.response?.status, error.response?.statusText);
       
       throw error;
     }
   },
   
-  updateTask: async (id: number, data: Partial<Omit<Task, 'id' | 'documentId'>>): Promise<Task> => {
-    const response = await api.put(`/api/tasks/${id}`, { data });
-    return response.data;
+  updateTask: async (task: Task, data: Partial<Omit<Task, 'id' | 'documentId'>>): Promise<Task> => {
+    const taskId = task.documentId || task.id;
+    console.log('Updating task:', taskId);
+    try {
+      const response = await api.put(`${config.endpoints.TASKS}/${taskId}`, { data });
+      console.log('Task updated successfully');
+      return response.data.data || response.data;
+    } catch (error: any) {
+      console.error('Error updating task:', error.response?.status, error.response?.statusText);
+      throw error;
+    }
   },
   
   approveTask: async (task: Task): Promise<Task> => {
     const taskId = task.documentId || task.id;
-    console.log('🟢 Approving task:', taskId, 'Full task:', task);
+    console.log('Approving task:', taskId);
     try {
-      const response = await api.put(`/api/tasks/${taskId}`, {
+      const response = await api.put(`${config.endpoints.TASKS}/${taskId}`, {
         data: { approved: true }
       });
-      console.log('✅ Task approved successfully:', response.data);
+      console.log('Task approved successfully');
       // Return the data directly since Strapi v5 returns the updated document
       return response.data.data || response.data;
     } catch (error: any) {
-      console.error('❌ Error approving task:', {
-        taskId,
-        url: `/api/tasks/${taskId}`,
-        error: error.response?.data || error.message,
-        status: error.response?.status
-      });
+      console.error('Error approving task:', error.response?.status, error.response?.statusText);
       throw error;
     }
   },
   
   disapproveTask: async (task: Task): Promise<Task> => {
     const taskId = task.documentId || task.id;
-    console.log('🔴 Disapproving task:', taskId, 'Full task:', task);
+    console.log('Disapproving task:', taskId);
     try {
-      const response = await api.put(`/api/tasks/${taskId}`, {
+      const response = await api.put(`${config.endpoints.TASKS}/${taskId}`, {
         data: { approved: false }
       });
-      console.log('✅ Task disapproved successfully:', response.data);
+      console.log('Task disapproved successfully');
       // Return the data directly since Strapi v5 returns the updated document
       return response.data.data || response.data;
     } catch (error: any) {
-      console.error('❌ Error disapproving task:', {
-        taskId,
-        url: `/api/tasks/${taskId}`,
-        error: error.response?.data || error.message,
-        status: error.response?.status
-      });
+      console.error('Error disapproving task:', error.response?.status, error.response?.statusText);
       throw error;
     }
   },
   
-  updateSummary: async (id: number, summary: string): Promise<Task> => {
-    const response = await api.put(`/api/tasks/${id}`, {
-      data: { summary }
-    });
-    return response.data;
+  updateSummary: async (task: Task, summary: string): Promise<Task> => {
+    const taskId = task.documentId || task.id;
+    console.log('Updating summary for task:', taskId);
+    try {
+      const response = await api.put(`${config.endpoints.TASKS}/${taskId}`, {
+        data: { summary }
+      });
+      console.log('Summary updated successfully');
+      return response.data.data || response.data;
+    } catch (error: any) {
+      console.error('Error updating summary:', error.response?.status, error.response?.statusText);
+      throw error;
+    }
   },
 };
