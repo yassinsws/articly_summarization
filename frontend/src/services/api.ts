@@ -59,8 +59,8 @@ export const authAPI = {
       console.log('Login successful');
 
       return response.data;
-    } catch (error: any) {
-      console.error('Login failed:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Login failed:', error);
       
       // Re-throw the error to be handled by the caller
       throw error;
@@ -94,8 +94,8 @@ export const tasksAPI = {
       console.log('Tasks fetched successfully. Count:', response.data?.data?.length || 0);
       
       return response.data;
-    } catch (error: any) {
-      console.error('Error fetching tasks:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Error fetching tasks:', error);
       
       throw error;
     }
@@ -108,8 +108,8 @@ export const tasksAPI = {
       const response = await api.put(`${config.endpoints.TASKS}/${taskId}`, { data });
       console.log('Task updated successfully');
       return response.data.data || response.data;
-    } catch (error: any) {
-      console.error('Error updating task:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Error updating task:', error);
       throw error;
     }
   },
@@ -124,8 +124,8 @@ export const tasksAPI = {
       console.log('Task approved successfully');
       // Return the data directly since Strapi v5 returns the updated document
       return response.data.data || response.data;
-    } catch (error: any) {
-      console.error('Error approving task:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Error approving task:', error);
       throw error;
     }
   },
@@ -140,8 +140,8 @@ export const tasksAPI = {
       console.log('Task disapproved successfully');
       // Return the data directly since Strapi v5 returns the updated document
       return response.data.data || response.data;
-    } catch (error: any) {
-      console.error('Error disapproving task:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Error disapproving task:', error);
       throw error;
     }
   },
@@ -155,8 +155,8 @@ export const tasksAPI = {
       });
       console.log('Summary updated successfully');
       return response.data.data || response.data;
-    } catch (error: any) {
-      console.error('Error updating summary:', error.response?.status, error.response?.statusText);
+    } catch (error: unknown) {
+      console.error('Error updating summary:', error);
       throw error;
     }
   },

@@ -42,7 +42,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
     try {
       const updatedTask = await tasksAPI.approveTask(task);
       onTaskUpdate(updatedTask);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error approving task:', err);
       setError('Failed to approve task. Please try again.');
     } finally {
@@ -56,7 +56,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
     try {
       const updatedTask = await tasksAPI.disapproveTask(task);
       onTaskUpdate(updatedTask);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error disapproving task:', err);
       setError('Failed to disapprove task. Please try again.');
     } finally {
@@ -76,7 +76,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
       const updatedTask = await tasksAPI.updateSummary(task, editedSummary.trim());
       onTaskUpdate(updatedTask);
       setIsEditingSummary(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating summary:', err);
       setError('Failed to update summary. Please try again.');
     } finally {

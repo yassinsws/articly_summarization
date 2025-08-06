@@ -15,7 +15,7 @@ export interface Task {
   updatedAt: string;
   publishedAt?: string | null;
   locale: string;
-  localizations: any[];
+  localizations: unknown[];
 }
 
 export interface LoginCredentials {

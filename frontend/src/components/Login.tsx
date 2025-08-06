@@ -31,12 +31,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       
       try {
         await onLogin(values);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Login error:', err);
-        setError(
-          err.response?.data?.error?.message || 
-          'Login failed. Please check your credentials.'
-        );
+        const errorMessage = err instanceof Error 
+          ? err.message 
+          : 'Login failed. Please check your credentials.';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

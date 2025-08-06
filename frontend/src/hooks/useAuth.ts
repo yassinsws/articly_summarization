@@ -32,7 +32,7 @@ export const useAuth = (): UseAuthReturn => {
             setUser(storedUser);
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to initialize auth:', err);
         // Clear potentially corrupted data
         authAPI.logout();
@@ -56,10 +56,11 @@ export const useAuth = (): UseAuthReturn => {
       localStorage.setItem(config.settings.USER_KEY, JSON.stringify(response.user));
       
       setUser(response.user);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = 
-        err.response?.data?.error?.message || 
-        'Login failed. Please check your credentials.';
+        err instanceof Error 
+          ? err.message 
+          : 'Login failed. Please check your credentials.';
       setError(errorMessage);
       throw err;
     } finally {

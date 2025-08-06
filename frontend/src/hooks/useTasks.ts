@@ -39,7 +39,7 @@ export const useTasks = (): UseTasksReturn => {
       
       const response = await tasksAPI.getUserTasks();
       setTasks(response.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading tasks:', err);
       setError('Failed to load tasks. Please try again.');
     } finally {
