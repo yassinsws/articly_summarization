@@ -2,11 +2,10 @@ import axios from 'axios';
 import { AuthResponse, LoginCredentials, TasksResponse, Task } from '../types';
 import { config } from '../config/env';
 
-const API_URL = config.API_URL;
-
-// Create axios instance with default config
+// Use empty baseURL to make relative requests that go through Vite proxy
+// The proxy will handle routing /api/* to the backend
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: '',
   headers: {
     'Content-Type': 'application/json',
   },

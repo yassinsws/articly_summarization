@@ -33,7 +33,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # Frontend React App (Development Mode)
   frontend:
     build:
       context: ./frontend
@@ -41,8 +40,7 @@ services:
     container_name: dev_frontend
     restart: unless-stopped
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_API_URL=http://localhost:1337
+      - VITE_API_URL=http://strapi:1337
     volumes:
       # Mount source code for hot reload
       - ./frontend:/app

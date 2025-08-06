@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Simple Docker Setup Script for Strapi with SQLite + React Frontend
+# Simple Docker Setup Script for Strapi with SQLite + React Frontend (Vite)
 
 set -e  # Exit on any error
 
-echo "🚀 Starting Strapi with SQLite + React Frontend..."
+echo "🚀 Starting Strapi with SQLite + React Frontend (Vite)..."
 
 # Function to check if Docker is running
 check_docker() {
@@ -33,7 +33,7 @@ start_services() {
     
     while [ $count -lt $max_attempts ]; do
         if curl -f http://localhost:1337/_health > /dev/null 2>&1; then
-            echo "Strapi is ready!"
+            echo "✅ Strapi is ready!"
             break
         fi
         echo "Still waiting for Strapi... (attempt $((count + 1))/$max_attempts)"
@@ -46,17 +46,44 @@ start_services() {
         echo "   You can still try accessing it manually at http://localhost:1337"
     fi
     
+    # Wait for Frontend (Vite) to be ready
+    echo "Waiting for Frontend (Vite)..."
+    
+    count=0
+    max_attempts=12  # 12 * 5 seconds = 60 seconds total
+    
+    while [ $count -lt $max_attempts ]; do
+        if curl -f http://localhost:3000 > /dev/null 2>&1; then
+            echo "✅ Frontend (Vite) is ready!"
+            break
+        fi
+        echo "Still waiting for Frontend... (attempt $((count + 1))/$max_attempts)"
+        sleep 5
+        count=$((count + 1))
+    done
+    
+    if [ $count -eq $max_attempts ]; then
+        echo "⚠️  Frontend health check timed out after 60 seconds"
+        echo "   You can still try accessing it manually at http://localhost:3000"
+    fi
+    
     echo "✅ All services are up and running!"
     echo ""
     echo "🎉 Your application is ready:"
-    echo "   📊 Frontend: http://localhost:3000"
+    echo "   📊 Frontend (Vite): http://localhost:3000"
     echo "   🔧 Strapi Admin: http://localhost:1337/admin"
     echo "   📁 Database: SQLite (stored in container volume)"
+    echo ""
+    echo "🔧 Development Features:"
+    echo "   ⚡ Vite HMR (Hot Module Replacement)"
+    echo "   🔄 Live reload for both frontend and backend"
+    echo "   🚀 Fast TypeScript compilation"
     echo ""
     echo "📋 Useful commands:"
     echo "   View logs: docker-compose logs -f"
     echo "   Stop services: docker-compose down"
     echo "   Rebuild: docker-compose up --build"
+    echo "   Frontend only: docker-compose up frontend --build"
 }
 
 # Function to stop services

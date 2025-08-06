@@ -1,6 +1,6 @@
 import React from 'react';
 import { Paper, Typography, Box, Button } from '@mui/material';
-import { Add, Search } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
 
 interface EmptyStateProps {
   title: string;

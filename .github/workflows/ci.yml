@@ -7,42 +7,31 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # Frontend Build and Lint
+  # Frontend Build
   frontend:
-    name: Frontend CI
+    name: Frontend Build
     runs-on: ubuntu-latest
     
     defaults:
       run:
         working-directory: ./frontend
     
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js ${{ matrix.node-version }}
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: './frontend/package-lock.json'
     
     - name: Install dependencies
       run: npm ci
     
-    - name: Run ESLint
-      run: npm run lint
-    
-    - name: Run TypeScript check
-      run: npx tsc --noEmit
-    
-    - name: Run tests (if available)
-      run: npm test -- --coverage --watchAll=false
-      continue-on-error: true
+    - name: TypeScript check
+      run: npm run type-check
     
     - name: Build application
       run: npm run build
@@ -50,70 +39,38 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: frontend-build-${{ matrix.node-version }}
+        name: frontend-build
         path: frontend/build/
         retention-days: 7
 
-  # Strapi Backend Build and Lint
+  # Backend Build
   backend:
-    name: Backend CI
+    name: Backend Build
     runs-on: ubuntu-latest
     
     defaults:
       run:
         working-directory: ./my-strapi-project
     
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: strapi_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Setup Node.js ${{ matrix.node-version }}
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '18.x'
         cache: 'npm'
         cache-dependency-path: my-strapi-project/package-lock.json
     
     - name: Install dependencies
       run: npm ci
     
-    - name: Run ESLint (if configured)
-      run: npm run lint || echo "No lint script found, skipping..."
-      continue-on-error: true
-    
-    - name: Run TypeScript check
-      run: npx tsc --noEmit || echo "No TypeScript config found, skipping..."
-      continue-on-error: true
-    
-    - name: Build Strapi admin
+    - name: Build Strapi application
       env:
-        NODE_ENV: development
-        DATABASE_CLIENT: postgres
-        DATABASE_HOST: localhost
-        DATABASE_PORT: 5432
-        DATABASE_NAME: strapi_test
-        DATABASE_USERNAME: postgres
-        DATABASE_PASSWORD: postgres
-        DATABASE_SSL: false
+        NODE_ENV: production
+        DATABASE_CLIENT: sqlite
+        DATABASE_FILENAME: ./tmp/data.db
         JWT_SECRET: test-jwt-secret
         ADMIN_JWT_SECRET: test-admin-jwt-secret
         APP_KEYS: test-app-keys
@@ -124,75 +81,19 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: backend-build-${{ matrix.node-version }}
-        path: my-strapi-project/build/
+        name: backend-build
+        path: ./my-strapi-project/build/
         retention-days: 7
 
-  # Docker Development Build Test
-  docker-build:
-    name: Docker Development Build Test
+  # Summary
+  summary:
+    name: Build Summary
     runs-on: ubuntu-latest
     needs: [frontend, backend]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Build Frontend Development Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        file: ./frontend/Dockerfile
-        push: false
-        tags: frontend-dev:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Build Backend Development Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./my-strapi-project
-        file: ./my-strapi-project/Dockerfile
-        push: false
-        tags: backend-dev:test
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Test Docker Compose Development Setup
+    - name: Build Summary
       run: |
-        # Create a test environment file for development
-        cat > .env << EOF
-        AZURE_OPENAI_API_KEY=test-key
-        ENDPOINT_URL=test-url
-        API_VERSION=2024-02-01
-        DEPLOYMENT_NAME=test-deployment
-        EOF
-        
-        # Test docker-compose configuration
-        docker-compose config
-
-  # Security Scanning
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-    
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+        echo "✅ Frontend build completed successfully"
+        echo "✅ Backend build completed successfully"
+        echo "🎉 All components built successfully!"

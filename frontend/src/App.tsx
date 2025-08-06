@@ -1,18 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import { useAuth } from './hooks/useAuth';
-import { validateEnvironment } from './config/env';
 
 const App: React.FC = () => {
   const { user, isLoading, login, logout } = useAuth();
-
-  // Validate environment on app start
-  useEffect(() => {
-    validateEnvironment();
-  }, []);
 
   // Show loading while checking auth status
   if (isLoading) {

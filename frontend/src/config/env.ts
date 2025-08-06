@@ -1,7 +1,7 @@
 // Environment configuration
 export const config = {
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:1337',
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  API_URL: import.meta.env.VITE_API_URL || 'http://localhost:1337',
+  NODE_ENV: import.meta.env.MODE || 'development',
   
   // API endpoints
   endpoints: {
@@ -16,18 +16,3 @@ export const config = {
     REFRESH_INTERVAL: 30000, // 30 seconds
   },
 } as const;
-
-// Validation for required environment variables
-const requiredEnvVars = ['REACT_APP_API_URL'];
-
-export const validateEnvironment = (): void => {
-  const missing = requiredEnvVars.filter(
-    (varName) => !process.env[varName]
-  );
-  
-  if (missing.length > 0) {
-    console.warn(
-      `Missing environment variables: ${missing.join(', ')}`
-    );
-  }
-};
