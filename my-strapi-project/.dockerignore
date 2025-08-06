@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.dockerignore
+Dockerfile
+.git
+.gitignore
+README.md
+.env
+.tmp/
+.cache/
+build/
+dist/
+.strapi-updater.json
+*.log
+coverage/
+.nyc_output/
+.DS_Store

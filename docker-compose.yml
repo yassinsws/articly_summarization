@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Strapi Backend (Development Mode) with SQLite
+  strapi:
+    build:
+      context: ./my-strapi-project
+      dockerfile: Dockerfile
+    container_name: dev_strapi
+    restart: unless-stopped
+    env_file:
+      - ./my-strapi-project/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_CLIENT: sqlite
+      DATABASE_FILENAME: .tmp/data.db
+      HOST: 0.0.0.0
+      PORT: 1337
+    volumes:
+      # Mount source code for hot reload
+      - ./my-strapi-project:/opt
+      - /opt/node_modules
+      - strapi_uploads:/opt/public/uploads
+      - strapi_database:/opt/.tmp
+    ports:
+      - "1337:1337"
+    networks:
+      - dev-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend React App (Development Mode)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dev_frontend
+    restart: unless-stopped
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=http://localhost:1337
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      strapi:
+        condition: service_healthy
+    networks:
+      - dev-network
+
+volumes:
+  strapi_uploads:
+  strapi_database:
+
+networks:
+  dev-network:
+    driver: bridge
