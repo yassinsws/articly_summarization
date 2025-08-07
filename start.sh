@@ -29,36 +29,36 @@ start_services() {
     
     # macOS-compatible timeout loop
     local count=0
-    local max_attempts=24  # 24 * 5 seconds = 120 seconds total
-    
+    local max_attempts=12  # 12 * 10 seconds = 120 seconds total
+
     while [ $count -lt $max_attempts ]; do
         if curl -f http://localhost:1337/_health > /dev/null 2>&1; then
             echo "✅ Strapi is ready!"
             break
         fi
         echo "Still waiting for Strapi... (attempt $((count + 1))/$max_attempts)"
-        sleep 5
+        sleep 10
         count=$((count + 1))
     done
-    
+
     if [ $count -eq $max_attempts ]; then
         echo "⚠️  Strapi health check timed out after 120 seconds"
         echo "   You can still try accessing it manually at http://localhost:1337"
     fi
-    
+
     # Wait for Frontend (Vite) to be ready
     echo "Waiting for Frontend (Vite)..."
-    
+
     count=0
-    max_attempts=12  # 12 * 5 seconds = 60 seconds total
-    
+    max_attempts=6  # 6 * 10 seconds = 60 seconds total
+
     while [ $count -lt $max_attempts ]; do
         if curl -f http://localhost:3000 > /dev/null 2>&1; then
             echo "✅ Frontend (Vite) is ready!"
             break
         fi
         echo "Still waiting for Frontend... (attempt $((count + 1))/$max_attempts)"
-        sleep 5
+        sleep 10
         count=$((count + 1))
     done
     
