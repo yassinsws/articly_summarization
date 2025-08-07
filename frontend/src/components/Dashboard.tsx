@@ -1,4 +1,4 @@
-import React from 'react';
+// React import removed for React 19 compatibility
 import {
   Container,
   Typography,

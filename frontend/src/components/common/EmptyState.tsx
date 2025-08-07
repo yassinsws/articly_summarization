@@ -1,4 +1,3 @@
-import React from 'react';
 import { Paper, Typography, Box, Button } from '@mui/material';
 import { Add } from '@mui/icons-material';
 

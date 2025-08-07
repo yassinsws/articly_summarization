@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -29,7 +29,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [editedSummary, setEditedSummary] = useState(task?.summary || '');
-  React.useEffect(() => {
+  useEffect(() => {
     setEditedSummary(task?.summary || '');
   }, [task?.summary]);
   const [isEditingSummary, setIsEditingSummary] = useState(false);

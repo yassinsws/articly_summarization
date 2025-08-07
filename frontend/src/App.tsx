@@ -1,4 +1,4 @@
-import React from 'react';
+// React import removed for React 19 compatibility
 import { Box } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';

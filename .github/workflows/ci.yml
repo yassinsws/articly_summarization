@@ -12,6 +12,10 @@ jobs:
     name: Frontend Build
     runs-on: ubuntu-latest
     
+    defaults:
+      run:
+        working-directory: ./frontend
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -21,23 +25,19 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install dependencies
       run: npm ci
-      working-directory: ./frontend
     
     - name: TypeScript check
       run: npm run type-check
-      working-directory: ./frontend
     
     - name: Lint check
       run: npm run lint
-      working-directory: ./frontend
     
     - name: Build application
       run: npm run build
-      working-directory: ./frontend
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -51,6 +51,10 @@ jobs:
     name: Backend Build
     runs-on: ubuntu-latest
     
+    defaults:
+      run:
+        working-directory: ./my-strapi-project
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -60,11 +64,10 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: my-strapi-project/package-lock.json
+        cache-dependency-path: package-lock.json
     
     - name: Install dependencies
       run: npm ci
-      working-directory: ./my-strapi-project
     
     - name: Build Strapi application
       env:
@@ -77,7 +80,6 @@ jobs:
         API_TOKEN_SALT: test-api-token-salt
         TRANSFER_TOKEN_SALT: test-transfer-token-salt
       run: npm run build
-      working-directory: ./my-strapi-project
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
