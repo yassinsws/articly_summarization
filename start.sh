@@ -22,57 +22,15 @@ start_services() {
     # Build images and start services
     docker-compose up --build -d
     
-    echo "⏳ Waiting for services to start..."
-    
-    # Wait for Strapi to be ready
-    echo "Waiting for Strapi..."
-    
-    # macOS-compatible timeout loop
-    local count=0
-    local max_attempts=12  # 12 * 10 seconds = 120 seconds total
-
-    while [ $count -lt $max_attempts ]; do
-        if curl -f http://localhost:1337/_health > /dev/null 2>&1; then
-            echo "✅ Strapi is ready!"
-            break
-        fi
-        echo "Still waiting for Strapi... (attempt $((count + 1))/$max_attempts)"
-        sleep 10
-        count=$((count + 1))
-    done
-
-    if [ $count -eq $max_attempts ]; then
-        echo "⚠️  Strapi health check timed out after 120 seconds"
-        echo "   You can still try accessing it manually at http://localhost:1337"
-    fi
-
-    # Wait for Frontend (Vite) to be ready
-    echo "Waiting for Frontend (Vite)..."
-
-    count=0
-    max_attempts=6  # 6 * 10 seconds = 60 seconds total
-
-    while [ $count -lt $max_attempts ]; do
-        if curl -f http://localhost:3000 > /dev/null 2>&1; then
-            echo "✅ Frontend (Vite) is ready!"
-            break
-        fi
-        echo "Still waiting for Frontend... (attempt $((count + 1))/$max_attempts)"
-        sleep 10
-        count=$((count + 1))
-    done
-    
-    if [ $count -eq $max_attempts ]; then
-        echo "⚠️  Frontend health check timed out after 60 seconds"
-        echo "   You can still try accessing it manually at http://localhost:3000"
-    fi
-    
-    echo "✅ All services are up and running!"
+    echo "🚀 Services started!"
     echo ""
     echo "🎉 Your application is ready:"
     echo "   📊 Frontend (Vite): http://localhost:3000"
     echo "   🔧 Strapi Admin: http://localhost:1337/admin"
     echo "   📁 Database: SQLite (stored in container volume)"
+    echo ""
+    echo "ℹ️  Note: Services may take a few moments to fully initialize."
+    echo "   If you get connection errors, wait 30-60 seconds and try again."
     echo ""
     echo "🔧 Development Features:"
     echo "   ⚡ Vite HMR (Hot Module Replacement)"
